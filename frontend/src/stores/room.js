@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
-const API = 'http://localhost:8080/api'
-const WS_BASE = 'ws://localhost:8080/ws'
+const _base = import.meta.env.VITE_API_BASE
+const API = `${_base}/api`
+const WS_BASE = `${_base.replace(/^http/, 'ws')}/ws`
 
 export const useRoomStore = defineStore('room', () => {
   const roomId = ref(null)

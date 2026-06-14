@@ -434,7 +434,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRoomStore } from '../stores/room'
 import axios from 'axios'
 
-const API = 'http://localhost:8080/api'
+const API = `${import.meta.env.VITE_API_BASE}/api`
 
 const EMOJIS = ['❤️', '🔥', '😭', '666', '牛', '顶']
 
