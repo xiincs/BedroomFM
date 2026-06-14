@@ -1,0 +1,314 @@
+<template>
+  <div class="home">
+    <div class="home-bg"></div>
+    <div class="home-content">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="10" fill="#7C5CFA"/>
+            <path d="M8 22V12l12-4v10M8 22a3 3 0 1 0 6 0 3 3 0 0 0-6 0zm12-4a3 3 0 1 0 6 0 3 3 0 0 0-6 0z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">Bedroom FM</div>
+          <div class="brand-sub">宿舍共享音乐房间</div>
+        </div>
+      </div>
+
+      <div class="home-cards">
+        <!-- Create Room -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <span class="home-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </span>
+            <span>创建房间</span>
+          </div>
+          <div class="home-card-body">
+            <div class="field">
+              <label>房间名称</label>
+              <input v-model="createForm.name" class="input" placeholder="505宿舍音乐房" maxlength="30" @keyup.enter="create"/>
+            </div>
+            <div class="field">
+              <label>你的昵称</label>
+              <input v-model="createForm.nickname" class="input" placeholder="DJ小明" maxlength="16" @keyup.enter="create"/>
+            </div>
+            <button class="btn btn-primary" style="width:100%" :disabled="creating" @click="create">
+              <span v-if="creating" class="spinner"></span>
+              <span>{{ creating ? '创建中...' : '创建房间' }}</span>
+            </button>
+            <div v-if="createError" class="field-error">{{ createError }}</div>
+          </div>
+        </div>
+
+        <div class="home-divider">
+          <span>或</span>
+        </div>
+
+        <!-- Join Room -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <span class="home-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+              </svg>
+            </span>
+            <span>加入房间</span>
+          </div>
+          <div class="home-card-body">
+            <div class="field">
+              <label>邀请码</label>
+              <input v-model="joinForm.code" class="input code-input" placeholder="A7KD9" maxlength="5" @keyup.enter="join"/>
+            </div>
+            <div class="field">
+              <label>你的昵称</label>
+              <input v-model="joinForm.nickname" class="input" placeholder="阿豪" maxlength="16" @keyup.enter="join"/>
+            </div>
+            <button class="btn btn-ghost" style="width:100%" :disabled="joining" @click="join">
+              <span v-if="joining" class="spinner"></span>
+              <span>{{ joining ? '加入中...' : '加入房间' }}</span>
+            </button>
+            <div v-if="joinError" class="field-error">{{ joinError }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-features">
+        <div class="feat"><span class="feat-dot green"></span>实时同步播放</div>
+        <div class="feat"><span class="feat-dot purple"></span>轮流点歌机制</div>
+        <div class="feat"><span class="feat-dot orange"></span>顶歌 / 切歌投票</div>
+        <div class="feat"><span class="feat-dot red"></span>表情轰炸互动</div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useRoomStore } from '../stores/room'
+
+const router = useRouter()
+const store = useRoomStore()
+
+const createForm = ref({ name: '', nickname: '' })
+const joinForm = ref({ code: '', nickname: '' })
+const creating = ref(false)
+const joining = ref(false)
+const createError = ref('')
+const joinError = ref('')
+
+async function create() {
+  if (!createForm.value.name || !createForm.value.nickname) {
+    createError.value = '请填写房间名称和昵称'
+    return
+  }
+  creating.value = true
+  createError.value = ''
+  try {
+    const data = await store.createRoom(createForm.value.name, createForm.value.nickname)
+    router.push(`/room/${data.roomId}`)
+  } catch (e) {
+    createError.value = '创建失败，请检查服务是否启动'
+  } finally {
+    creating.value = false
+  }
+}
+
+async function join() {
+  if (!joinForm.value.code || !joinForm.value.nickname) {
+    joinError.value = '请填写邀请码和昵称'
+    return
+  }
+  joining.value = true
+  joinError.value = ''
+  try {
+    const data = await store.joinRoom(joinForm.value.code, joinForm.value.nickname)
+    router.push(`/room/${data.roomId}`)
+  } catch (e) {
+    joinError.value = e?.response?.data?.error || '加入失败，邀请码错误'
+  } finally {
+    joining.value = false
+  }
+}
+</script>
+
+<style scoped>
+.home {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 40%, rgba(124,92,250,0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(34,217,122,0.06) 0%, transparent 70%);
+}
+
+.home-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  width: 100%;
+  max-width: 720px;
+  padding: 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(124,92,250,0.1);
+  border: 1px solid rgba(124,92,250,0.2);
+}
+.brand-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text0);
+  letter-spacing: -0.5px;
+}
+.brand-sub {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.home-cards {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+}
+
+.home-card {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.home-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text0);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.home-card-icon {
+  display: flex;
+  align-items: center;
+  color: var(--accent-light);
+}
+
+.home-card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  letter-spacing: 0.02em;
+}
+.field-error {
+  font-size: 12px;
+  color: var(--red);
+}
+
+.code-input {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.home-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+  position: relative;
+}
+.home-divider span {
+  font-size: 12px;
+  color: var(--text3);
+  background: var(--bg0);
+  padding: 4px 0;
+  z-index: 1;
+  writing-mode: vertical-rl;
+}
+.home-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--border);
+}
+
+.home-features {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.feat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.feat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.feat-dot.green { background: var(--green); }
+.feat-dot.purple { background: var(--accent); }
+.feat-dot.orange { background: var(--orange); }
+.feat-dot.red { background: var(--red); }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+</style>
