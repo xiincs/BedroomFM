@@ -2,8 +2,10 @@ package main
 
 import (
 	"bedroomfm/internal/api"
+	"bedroomfm/internal/models"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,16 @@ func main() {
 		port = "8080"
 	}
 
+	// Persistent user store — JSON file, survives restarts
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = "data"
+	}
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Fatalf("cannot create data dir %s: %v", dataDir, err)
+	}
+	models.InitUserStore(filepath.Join(dataDir, "users.json"))
+
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
@@ -25,6 +37,11 @@ func main() {
 
 	v1 := r.Group("/api")
 	{
+		v1.POST("/auth/register", api.Register)
+		v1.POST("/auth/login", api.Login)
+		v1.GET("/auth/me", api.GetMe)
+		v1.POST("/user/xp", api.AddXP)
+
 		v1.POST("/room/create", api.CreateRoom)
 		v1.POST("/room/join", api.JoinRoom)
 		v1.GET("/room/:id", api.GetRoom)

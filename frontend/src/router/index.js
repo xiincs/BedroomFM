@@ -7,5 +7,6 @@ export default createRouter({
   routes: [
     { path: '/', component: Home },
     { path: '/room/:id', component: Room },
+    { path: '/profile', component: () => import('../views/Profile.vue') },
   ]
 })

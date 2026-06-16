@@ -1,6 +1,22 @@
 <template>
   <div class="home">
     <div class="home-bg"></div>
+
+    <!-- Auth Bar -->
+    <div class="auth-bar">
+      <div v-if="auth.isLoggedIn" class="auth-user-chip" @click="router.push('/profile')">
+        <img class="chip-avatar" :src="auth.user.avatar" :alt="auth.user.nickname" />
+        <span class="chip-name">{{ auth.user.nickname }}</span>
+        <span class="chip-badge" :style="chipBadgeStyle">Lv.{{ auth.user.level }}</span>
+      </div>
+      <button v-else class="btn btn-ghost btn-sm auth-login-btn" @click="showAuth = true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+        </svg>
+        登录 / 注册
+      </button>
+    </div>
+
     <div class="home-content">
       <div class="brand">
         <div class="brand-icon">
@@ -82,23 +98,41 @@
         <div class="feat"><span class="feat-dot red"></span>表情轰炸互动</div>
       </div>
     </div>
+
+    <!-- Auth Modal -->
+    <AuthModal v-model="showAuth" />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoomStore } from '../stores/room'
+import { useAuthStore } from '../stores/auth'
+import AuthModal from '../components/AuthModal.vue'
 
 const router = useRouter()
 const store = useRoomStore()
+const auth = useAuthStore()
 
-const createForm = ref({ name: '', nickname: '' })
-const joinForm = ref({ code: '', nickname: '' })
+const showAuth = ref(false)
+
+const chipBadgeStyle = computed(() => {
+  const g = auth.tier?.gradient
+  if (!g?.length) return { background: '#7C5CFA' }
+  return { background: g.length > 1 ? `linear-gradient(90deg, ${g.join(', ')})` : g[0] }
+})
+
+const createForm = ref({ name: '', nickname: auth.user?.nickname || '' })
+const joinForm = ref({ code: '', nickname: auth.user?.nickname || '' })
 const creating = ref(false)
 const joining = ref(false)
 const createError = ref('')
 const joinError = ref('')
+
+onMounted(() => {
+  if (auth.isLoggedIn) auth.fetchMe()
+})
 
 async function create() {
   if (!createForm.value.name || !createForm.value.nickname) {
@@ -109,6 +143,7 @@ async function create() {
   createError.value = ''
   try {
     const data = await store.createRoom(createForm.value.name, createForm.value.nickname)
+    auth.gainXP('join_room')
     router.push(`/room/${data.roomId}`)
   } catch (e) {
     createError.value = '创建失败，请检查服务是否启动'
@@ -126,6 +161,7 @@ async function join() {
   joinError.value = ''
   try {
     const data = await store.joinRoom(joinForm.value.code, joinForm.value.nickname)
+    auth.gainXP('join_room')
     router.push(`/room/${data.roomId}`)
   } catch (e) {
     joinError.value = e?.response?.data?.error || '加入失败，邀请码错误'
@@ -136,6 +172,51 @@ async function join() {
 </script>
 
 <style scoped>
+/* Auth bar */
+.auth-bar {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 10;
+}
+.auth-login-btn { gap: 6px; }
+
+.auth-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  background: var(--bg2);
+  border: 1px solid var(--border-active);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.auth-user-chip:hover { background: var(--bg3); border-color: var(--accent); }
+.chip-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.chip-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text1);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-badge {
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
 .home {
   height: 100vh;
   display: flex;

@@ -60,7 +60,10 @@
               {{ m.nickname }}
               <span v-if="m.id === store.room.hostId" class="badge badge-orange" style="font-size:10px;padding:1px 5px;">DJ</span>
             </div>
-            <div class="member-persona">{{ m.persona }}</div>
+            <div class="member-persona-row">
+              <span class="member-persona">{{ m.persona }}</span>
+              <VIPBadge v-if="m.id === store.memberId && auth.isLoggedIn" :level="auth.user.level" />
+            </div>
           </div>
           <div class="member-coins">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--yellow)" stroke="none"><circle cx="12" cy="12" r="10"/></svg>
@@ -448,6 +451,8 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRoomStore } from '../stores/room'
+import { useAuthStore } from '../stores/auth'
+import VIPBadge from '../components/VIPBadge.vue'
 import axios from 'axios'
 
 const API = `${import.meta.env.VITE_API_BASE}/api`
@@ -457,6 +462,7 @@ const EMOJIS = ['❤️', '🔥', '😭', '666', '牛', '顶']
 const route = useRoute()
 const router = useRouter()
 const store = useRoomStore()
+const auth = useAuthStore()
 
 const audioEl = ref(null)
 const chatEl = ref(null)
@@ -774,11 +780,13 @@ function voteUp(qid, amount) {
   const me = store.me
   if (!me || me.coins < amount) return
   store.sendVoteUp(qid, amount)
+  auth.gainXP('vote_up')
 }
 
 async function sendChat() {
   if (!chatInput.value.trim()) return
   store.sendChat(chatInput.value.trim())
+  auth.gainXP('chat')
   chatInput.value = ''
   await nextTick()
   if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight
@@ -817,6 +825,7 @@ function addToQueue(song) {
     cover: song.cover,
     duration: song.duration,
   })
+  auth.gainXP('add_song')
   showSearch.value = false
   mobileTab.value = 'now'
 }
@@ -1137,6 +1146,7 @@ onUnmounted(() => {
 }
 .member-info { flex: 1; min-width: 0; }
 .member-name { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.member-persona-row { display: flex; align-items: center; gap: 5px; }
 .member-persona { font-size: 10px; color: var(--text3); }
 .member-coins { font-size: 11px; color: var(--yellow); display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 
