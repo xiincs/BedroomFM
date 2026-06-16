@@ -4,6 +4,7 @@ import (
 	"bedroomfm/internal/hub"
 	"bedroomfm/internal/models"
 	"bedroomfm/internal/music"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -490,17 +491,34 @@ func mustJSON(v interface{}) json.RawMessage {
 	return b
 }
 
+// avatarURL generates a self-contained SVG data URL — no external service needed.
 func avatarURL(nickname string) string {
-	// DiceBear identicon via color hash
 	h := 0
 	for _, ch := range nickname {
 		h = h*31 + int(ch)
 	}
-	colors := []string{"7c3aed", "2563eb", "059669", "dc2626", "d97706", "db2777"}
-	color := colors[abs(h)%len(colors)]
-	_ = color
-	initials := string([]rune(nickname)[:min(1, len([]rune(nickname)))])
-	return fmt.Sprintf("https://ui-avatars.com/api/?name=%s&background=%s&color=fff&size=64&bold=true", initials, color)
+	bgs := []string{"7c3aed", "2563eb", "059669", "dc2626", "d97706", "db2777", "0891b2", "be185d"}
+	bg := bgs[abs(h)%len(bgs)]
+
+	runes := []rune(nickname)
+	initial := "?"
+	if len(runes) > 0 {
+		initial = xmlEscape(string(runes[0]))
+	}
+
+	svg := fmt.Sprintf(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">`+
+			`<rect width="64" height="64" rx="32" fill="#%s"/>`+
+			`<text x="32" y="32" text-anchor="middle" dominant-baseline="central" `+
+			`font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="white">%s</text>`+
+			`</svg>`,
+		bg, initial,
+	)
+	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg))
+}
+
+func xmlEscape(s string) string {
+	return strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;", `"`, "&quot;").Replace(s)
 }
 
 func abs(x int) int {
