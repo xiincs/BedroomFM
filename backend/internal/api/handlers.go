@@ -47,6 +47,11 @@ func CreateRoom(c *gin.Context) {
 	code := randomCode()
 	memberID := uuid.NewString()
 
+	authUserID := ""
+	if u := getAuthUser(c); u != nil {
+		authUserID = u.ID
+	}
+
 	room := models.NewRoom(roomID, code, req.RoomName, memberID)
 	host := &models.Member{
 		ID:       memberID,
@@ -56,6 +61,7 @@ func CreateRoom(c *gin.Context) {
 		IsHost:   true,
 		Persona:  "DJ",
 		JoinedAt: time.Now().UnixMilli(),
+		UserID:   authUserID,
 	}
 	room.Members[memberID] = host
 
@@ -85,6 +91,27 @@ func JoinRoom(c *gin.Context) {
 		return
 	}
 
+	// Deduplicate: if this auth user is already a member, return their existing seat
+	authUserID := ""
+	if u := getAuthUser(c); u != nil {
+		authUserID = u.ID
+		room.Mu.RLock()
+		for _, m := range room.Members {
+			if m.UserID == u.ID {
+				existingID := m.ID
+				room.Mu.RUnlock()
+				c.JSON(200, gin.H{
+					"roomId":   room.ID,
+					"memberId": existingID,
+					"roomName": room.Name,
+					"code":     room.Code,
+				})
+				return
+			}
+		}
+		room.Mu.RUnlock()
+	}
+
 	memberID := uuid.NewString()
 	member := &models.Member{
 		ID:       memberID,
@@ -94,6 +121,7 @@ func JoinRoom(c *gin.Context) {
 		IsHost:   false,
 		Persona:  "听众",
 		JoinedAt: time.Now().UnixMilli(),
+		UserID:   authUserID,
 	}
 	room.Mu.Lock()
 	room.Members[memberID] = member
