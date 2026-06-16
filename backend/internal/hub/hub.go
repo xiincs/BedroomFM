@@ -168,21 +168,6 @@ func (c *Client) ReadPump(onMessage func(c *Client, msg WSMessage)) {
 	defer func() {
 		c.hub.Unregister(c)
 		c.conn.Close()
-		// notify room member left
-		room := c.hub.GetRoom(c.RoomID)
-		if room != nil {
-			room.Mu.Lock()
-			delete(room.Members, c.MemberID)
-			room.Mu.Unlock()
-			c.hub.Broadcast(c.RoomID, WSMessage{
-				Type:    "member_leave",
-				Payload: mustJSON(map[string]interface{}{"memberId": c.MemberID}),
-			})
-			c.hub.Broadcast(c.RoomID, WSMessage{
-				Type:    "room_state",
-				Payload: mustJSON(roomState(room)),
-			})
-		}
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))

@@ -45,16 +45,23 @@ export const useRoomStore = defineStore('room', () => {
     return data
   }
 
+  let retryCount = 0
+
   function connect() {
     if (ws.value) ws.value.close()
     const url = `${WS_BASE}/${roomId.value}?memberId=${memberId.value}`
     const socket = new WebSocket(url)
 
-    socket.onopen = () => { connected.value = true }
-    socket.onclose = () => {
+    socket.onopen = () => { connected.value = true; retryCount = 0 }
+    socket.onclose = (e) => {
       connected.value = false
-      // auto reconnect after 3s
-      setTimeout(() => { if (roomId.value) connect() }, 3000)
+      retryCount++
+      if (retryCount > 5) {
+        disconnect()
+        window.location.href = '/'
+        return
+      }
+      setTimeout(() => { if (roomId.value) connect() }, 2000)
     }
     socket.onmessage = (e) => {
       try {

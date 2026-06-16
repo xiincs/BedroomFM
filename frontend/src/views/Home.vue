@@ -311,4 +311,96 @@ async function join() {
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
+
+/* ====== Mobile Responsive ====== */
+@media (max-width: 768px) {
+  .home {
+    height: 100vh;
+    height: 100dvh;
+    padding: 0;
+  }
+
+  .home-content {
+    padding: 20px 16px;
+    gap: 24px;
+    max-width: 100%;
+  }
+
+  .brand {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  .brand-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+  .brand-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .brand-name {
+    font-size: 20px;
+  }
+  .brand-sub {
+    font-size: 12px;
+  }
+
+  .home-cards {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+  }
+
+  .home-card {
+    width: 100%;
+  }
+
+  .home-card-body {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .home-divider {
+    width: 100%;
+    height: auto;
+    padding: 6px 0;
+    justify-content: center;
+  }
+  .home-divider span {
+    writing-mode: horizontal-tb;
+    padding: 2px 8px;
+  }
+  .home-divider::before {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 1px;
+  }
+
+  .home-features {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+  .feat {
+    font-size: 11px;
+  }
+
+  .input {
+    height: 40px;
+    font-size: 14px;
+  }
+  .code-input {
+    font-size: 18px;
+  }
+
+  .btn {
+    height: 40px;
+    font-size: 14px;
+  }
+}
 </style>

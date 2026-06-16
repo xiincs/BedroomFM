@@ -1,5 +1,5 @@
 <template>
-  <div class="room-layout" v-if="store.room">
+  <div class="room-layout" :class="'tab-' + mobileTab" v-if="store.room">
     <!-- Danmaku layer -->
     <div class="danmaku-layer" aria-hidden="true">
       <div
@@ -263,6 +263,22 @@
       </div>
     </aside>
 
+    <!-- Mobile Bottom Nav -->
+    <nav class="mobile-nav">
+      <button class="mobile-nav-btn" :class="{ active: mobileTab === 'queue' }" @click="mobileTab = 'queue'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span>队列</span>
+      </button>
+      <button class="mobile-nav-btn" :class="{ active: mobileTab === 'now' }" @click="mobileTab = 'now'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
+        <span>播放</span>
+      </button>
+      <button class="mobile-nav-btn" :class="{ active: mobileTab === 'chat' }" @click="mobileTab = 'chat'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>聊天</span>
+      </button>
+    </nav>
+
     <!-- Hidden audio element -->
     <audio
       ref="audioEl"
@@ -449,6 +465,8 @@ const searchInputEl = ref(null)
 const isPlaying = ref(false)
 const currentPosition = ref(0)
 const positionTimer = ref(null)
+
+const mobileTab = ref('now') // 'now' | 'queue' | 'chat'
 
 const showSearch = ref(false)
 const searchQuery = ref('')
@@ -800,6 +818,7 @@ function addToQueue(song) {
     duration: song.duration,
   })
   showSearch.value = false
+  mobileTab.value = 'now'
 }
 
 function memberColor(nickname) {
@@ -1519,5 +1538,253 @@ onUnmounted(() => {
 @keyframes danmakuFlow {
   from { transform: translateX(100vw); }
   to { transform: translateX(-100%); }
+}
+
+/* ====== Mobile Responsive ====== */
+@media (max-width: 768px) {
+  .room-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* Sidebars hidden by default, shown based on mobileTab */
+  .sidebar {
+    display: none;
+    height: auto;
+    flex: 1;
+    overflow-y: auto;
+    border-right: none;
+    border-left: none;
+  }
+  .sidebar.left-sidebar {
+    display: none;
+  }
+  .sidebar.right-sidebar {
+    display: none;
+  }
+
+  /* Show sidebar when its tab is active */
+  .room-layout.show-queue .sidebar.left-sidebar,
+  .room-layout.show-chat .sidebar.right-sidebar {
+    display: flex;
+  }
+
+  /* Center panel */
+  .center-panel {
+    flex: 1;
+    height: auto;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  /* Now playing compact */
+  .now-playing {
+    padding: 12px 16px 8px;
+    gap: 8px;
+  }
+
+  .cover-img-wrap {
+    width: 120px;
+    height: 120px;
+  }
+  .cover-glow {
+    inset: -12px;
+  }
+
+  .song-name {
+    font-size: 16px;
+  }
+  .song-artist {
+    font-size: 13px;
+  }
+
+  .progress-section {
+    max-width: 100%;
+    margin-bottom: 12px;
+  }
+
+  .controls {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .ctrl-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .ctrl-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .lyrics-section {
+    max-width: 100%;
+    padding-bottom: 40px;
+  }
+  .lyric-line {
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .lyric-line.active {
+    font-size: 14px;
+  }
+
+  /* Reactions bar */
+  .reaction-bar {
+    padding: 8px 0;
+    gap: 6px;
+  }
+  .emoji-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  /* Members: compact */
+  .member-list {
+    max-height: 120px;
+  }
+
+  /* Queue: compact */
+  .queue-item {
+    padding: 8px;
+  }
+  .queue-cover {
+    width: 32px;
+    height: 32px;
+  }
+  .vote-btns {
+    display: flex !important;
+  }
+
+  /* Chat: compact */
+  .chat-input-row {
+    padding: 8px;
+  }
+
+  /* Room header compact */
+  .room-header {
+    padding: 10px 12px;
+  }
+  .room-name {
+    font-size: 14px;
+  }
+
+  .section-header {
+    padding: 8px 12px;
+  }
+
+  /* Modals: full screen */
+  .modal-box {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin-top: auto;
+  }
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  /* Empty playing */
+  .empty-playing {
+    padding: 16px;
+    gap: 12px;
+  }
+  .empty-disc {
+    width: 80px;
+    height: 80px;
+  }
+  .empty-disc-ring.outer {
+    width: 80px;
+    height: 80px;
+  }
+  .empty-disc-ring.inner {
+    width: 50px;
+    height: 50px;
+  }
+  .empty-title {
+    font-size: 16px;
+  }
+  .empty-sub {
+    font-size: 12px;
+  }
+
+  /* Search modal */
+  .search-item {
+    padding: 10px;
+  }
+  .search-cover {
+    width: 36px;
+    height: 36px;
+  }
+  .search-name {
+    font-size: 12px;
+  }
+  .search-meta {
+    font-size: 10px;
+  }
+  .modal-search {
+    padding: 10px 12px;
+  }
+
+  /* VIP modal */
+  .vip-modal-body {
+    padding: 14px;
+  }
+  .cookie-step {
+    font-size: 11px;
+  }
+}
+
+/* Mobile bottom nav */
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    background: var(--bg1);
+    border-top: 1px solid var(--border);
+    padding: 0;
+    flex-shrink: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .mobile-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0;
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10px;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav-btn.active {
+    color: var(--accent-light);
+  }
+  .mobile-nav-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Panel visibility by mobile tab */
+  .left-sidebar { display: none !important; }
+  .right-sidebar { display: none !important; }
+  .center-panel { display: none !important; }
+
+  .room-layout.tab-queue .left-sidebar { display: flex !important; }
+  .room-layout.tab-now .center-panel { display: flex !important; }
+  .room-layout.tab-chat .right-sidebar { display: flex !important; }
 }
 </style>
