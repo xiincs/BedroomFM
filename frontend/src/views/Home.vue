@@ -218,9 +218,8 @@ function rejoin() {
   router.push(`/room/${activeRoom.value.room.id}`)
 }
 
-function leaveRoom() {
-  localStorage.removeItem('bfm_roomId')
-  localStorage.removeItem('bfm_memberId')
+async function leaveRoom() {
+  await store.leaveRoom()  // removes member server-side, clears localStorage
   activeRoom.value = null
 }
 

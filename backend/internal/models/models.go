@@ -13,6 +13,7 @@ type Member struct {
 	Score    int    `json:"score"`
 	Persona  string `json:"persona"`
 	IsHost   bool   `json:"isHost"`
+	JoinedAt int64  `json:"joinedAt"` // unix ms, for host succession ordering
 }
 
 type Song struct {

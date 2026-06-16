@@ -44,6 +44,7 @@ func main() {
 
 		v1.POST("/room/create", api.CreateRoom)
 		v1.POST("/room/join", api.JoinRoom)
+		v1.POST("/room/leave", api.LeaveRoom)
 		v1.GET("/room/:id", api.GetRoom)
 		v1.GET("/music/search", api.SearchMusic)
 		v1.GET("/music/url", api.GetMusicURL)

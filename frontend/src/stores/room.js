@@ -152,6 +152,23 @@ export const useRoomStore = defineStore('room', () => {
   function sendVoteSkip() { send('vote_skip', {}) }
   function sendPlaybackSync(isPlaying, position) { send('playback_sync', { isPlaying, position }) }
   function sendNextSong() { send('next_song', {}) }
+  function sendTransferHost(targetMemberId) { send('transfer_host', { memberId: targetMemberId }) }
+
+  // Explicit leave: removes member server-side, then disconnects locally.
+  // Uses WS if open, falls back to HTTP when WS is already closed (e.g. home page).
+  async function leaveRoom() {
+    const rid = roomId.value || localStorage.getItem('bfm_roomId')
+    const mid = memberId.value || localStorage.getItem('bfm_memberId')
+    if (rid && mid) {
+      if (ws.value?.readyState === WebSocket.OPEN) {
+        send('leave', {})
+        await new Promise(r => setTimeout(r, 80))
+      } else {
+        try { await axios.post(`${API}/room/leave`, { roomId: rid, memberId: mid }) } catch {}
+      }
+    }
+    disconnect()
+  }
 
   async function checkActiveRoom() {
     const storedRoomId = localStorage.getItem('bfm_roomId')
@@ -213,7 +230,8 @@ export const useRoomStore = defineStore('room', () => {
   return {
     roomId, memberId, room, ws, connected, reactions,
     me, isHost, currentSong,
-    createRoom, joinRoom, connect, pause, disconnect, checkActiveRoom,
+    createRoom, joinRoom, connect, pause, disconnect, leaveRoom, checkActiveRoom,
+    sendTransferHost,
     sendChat, sendReaction, sendQueueAdd, sendQueueRemove,
     sendVoteUp, sendVoteSkip, sendPlaybackSync, sendNextSong,
     searchMusic, getMusicURL, getLyric,

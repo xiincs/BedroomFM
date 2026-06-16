@@ -55,6 +55,7 @@ func CreateRoom(c *gin.Context) {
 		Coins:    10,
 		IsHost:   true,
 		Persona:  "DJ",
+		JoinedAt: time.Now().UnixMilli(),
 	}
 	room.Members[memberID] = host
 
@@ -92,6 +93,7 @@ func JoinRoom(c *gin.Context) {
 		Coins:    10,
 		IsHost:   false,
 		Persona:  "听众",
+		JoinedAt: time.Now().UnixMilli(),
 	}
 	room.Mu.Lock()
 	room.Members[memberID] = member
@@ -447,11 +449,79 @@ func handleWSMessage(c *hub.Client, msg hub.WSMessage) {
 		broadcastRoomState(c.RoomID, room)
 
 	case "leave":
+		leaveRoomMember(room, c.MemberID)
+		broadcastRoomState(c.RoomID, room)
+
+	case "transfer_host":
+		room.Mu.RLock()
+		isHost := room.HostID == c.MemberID
+		room.Mu.RUnlock()
+		if !isHost {
+			return
+		}
+		var p struct {
+			MemberID string `json:"memberId"`
+		}
+		json.Unmarshal(msg.Payload, &p)
 		room.Mu.Lock()
-		delete(room.Members, c.MemberID)
+		if target, ok := room.Members[p.MemberID]; ok {
+			if cur, ok2 := room.Members[c.MemberID]; ok2 {
+				cur.IsHost = false
+				cur.Persona = "听众"
+			}
+			target.IsHost = true
+			target.Persona = "DJ"
+			room.HostID = target.ID
+		}
 		room.Mu.Unlock()
 		broadcastRoomState(c.RoomID, room)
 	}
+}
+
+// leaveRoomMember removes a member and transfers host if needed.
+func leaveRoomMember(room *models.Room, memberID string) {
+	room.Mu.Lock()
+	defer room.Mu.Unlock()
+	member, ok := room.Members[memberID]
+	if !ok {
+		return
+	}
+	wasHost := member.IsHost
+	delete(room.Members, memberID)
+	if wasHost && len(room.Members) > 0 {
+		// Promote earliest joiner
+		var next *models.Member
+		for _, m := range room.Members {
+			if next == nil || m.JoinedAt < next.JoinedAt {
+				next = m
+			}
+		}
+		if next != nil {
+			next.IsHost = true
+			next.Persona = "DJ"
+			room.HostID = next.ID
+		}
+	}
+}
+
+// POST /api/room/leave — used when WS is closed (e.g. user on home page)
+func LeaveRoom(c *gin.Context) {
+	var req struct {
+		RoomID   string `json:"roomId"`
+		MemberID string `json:"memberId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.RoomID == "" || req.MemberID == "" {
+		c.JSON(400, gin.H{"error": "bad request"})
+		return
+	}
+	room := hub.GlobalHub.GetRoom(req.RoomID)
+	if room == nil {
+		c.JSON(200, gin.H{"ok": true})
+		return
+	}
+	leaveRoomMember(room, req.MemberID)
+	broadcastRoomState(req.RoomID, room)
+	c.JSON(200, gin.H{"ok": true})
 }
 
 // startNext advances to the next song. Must be called with room.Mu held (write).

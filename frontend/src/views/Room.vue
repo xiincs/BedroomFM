@@ -41,6 +41,12 @@
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             {{ hasCookie ? 'VIP' : '设置VIP' }}
           </button>
+          <button class="leave-room-btn" @click="leaveAndGoHome" title="离开房间">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+            离开
+          </button>
         </div>
       </div>
       <div class="divider"></div>
@@ -65,9 +71,20 @@
               <VIPBadge v-if="m.id === store.memberId && auth.isLoggedIn" :level="auth.user.level" />
             </div>
           </div>
-          <div class="member-coins">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--yellow)" stroke="none"><circle cx="12" cy="12" r="10"/></svg>
-            {{ m.coins }}
+          <div class="member-actions">
+            <button
+              v-if="store.isHost && m.id !== store.memberId"
+              class="transfer-dj-btn"
+              @click="store.sendTransferHost(m.id)"
+              title="移交DJ"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              设为DJ
+            </button>
+            <div v-else class="member-coins">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--yellow)" stroke="none"><circle cx="12" cy="12" r="10"/></svg>
+              {{ m.coins }}
+            </div>
           </div>
         </div>
       </div>
@@ -776,6 +793,11 @@ function seekTo(e) {
   store.sendPlaybackSync(isPlaying.value, pos)
 }
 
+async function leaveAndGoHome() {
+  await store.leaveRoom()
+  router.push('/')
+}
+
 function voteUp(qid, amount) {
   const me = store.me
   if (!me || me.coins < amount) return
@@ -979,6 +1001,48 @@ onUnmounted(() => {
 }
 .vip-btn:hover { background: rgba(255,209,102,0.15); color: var(--text2); }
 .vip-btn.active { color: var(--yellow); border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.12); }
+
+.leave-room-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid rgba(239,68,68,0.2);
+  background: rgba(239,68,68,0.05);
+  color: var(--red);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+.leave-room-btn:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.4); }
+
+.member-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.transfer-dj-btn {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1px solid rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.07);
+  color: var(--yellow);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.transfer-dj-btn:hover { background: rgba(245,158,11,0.18); border-color: rgba(245,158,11,0.5); }
+.member-item:hover .transfer-dj-btn { display: inline-flex; }
 
 /* VIP modal */
 .vip-tabs {
