@@ -31,14 +31,16 @@ type WSMessage struct {
 }
 
 type RoomHub struct {
-	mu      sync.RWMutex
-	rooms   map[string]*models.Room
-	clients map[string]map[*Client]bool // roomID -> set of clients
+	mu            sync.RWMutex
+	rooms         map[string]*models.Room
+	clients       map[string]map[*Client]bool // roomID -> set of active WS clients
+	destroyTimers map[string]*time.Timer       // roomID -> pending destroy timer
 }
 
 var GlobalHub = &RoomHub{
-	rooms:   make(map[string]*models.Room),
-	clients: make(map[string]map[*Client]bool),
+	rooms:         make(map[string]*models.Room),
+	clients:       make(map[string]map[*Client]bool),
+	destroyTimers: make(map[string]*time.Timer),
 }
 
 func (h *RoomHub) GetRoom(id string) *models.Room {
@@ -72,6 +74,12 @@ func (h *RoomHub) Register(c *Client) {
 		h.clients[c.RoomID] = make(map[*Client]bool)
 	}
 	h.clients[c.RoomID][c] = true
+	// Someone reconnected — cancel pending destroy timer
+	if t, ok := h.destroyTimers[c.RoomID]; ok {
+		t.Stop()
+		delete(h.destroyTimers, c.RoomID)
+		log.Printf("hub: room %s reconnected, destroy timer cancelled", c.RoomID)
+	}
 }
 
 func (h *RoomHub) Unregister(c *Client) {
@@ -79,6 +87,21 @@ func (h *RoomHub) Unregister(c *Client) {
 	defer h.mu.Unlock()
 	if set, ok := h.clients[c.RoomID]; ok {
 		delete(set, c)
+		if len(set) == 0 {
+			// Last client left — schedule room destruction after 10 minutes
+			roomID := c.RoomID
+			h.destroyTimers[roomID] = time.AfterFunc(10*time.Minute, func() {
+				h.mu.Lock()
+				defer h.mu.Unlock()
+				if len(h.clients[roomID]) == 0 {
+					delete(h.rooms, roomID)
+					delete(h.clients, roomID)
+					delete(h.destroyTimers, roomID)
+					log.Printf("hub: room %s destroyed after 10min inactivity", roomID)
+				}
+			})
+			log.Printf("hub: room %s empty, scheduled destroy in 10min", c.RoomID)
+		}
 	}
 }
 

@@ -46,14 +46,22 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   let retryCount = 0
+  let retryTimer = null
 
   function connect() {
-    if (ws.value) ws.value.close()
+    clearTimeout(retryTimer)
+    retryTimer = null
+    if (ws.value) {
+      ws.value.onclose = null  // prevent old socket's handler from firing
+      ws.value.close()
+      ws.value = null
+    }
+    retryCount = 0
     const url = `${WS_BASE}/${roomId.value}?memberId=${memberId.value}`
     const socket = new WebSocket(url)
 
     socket.onopen = () => { connected.value = true; retryCount = 0 }
-    socket.onclose = (e) => {
+    socket.onclose = () => {
       connected.value = false
       retryCount++
       if (retryCount > 5) {
@@ -61,7 +69,7 @@ export const useRoomStore = defineStore('room', () => {
         window.location.href = '/'
         return
       }
-      setTimeout(() => { if (roomId.value) connect() }, 2000)
+      retryTimer = setTimeout(() => { if (roomId.value) connect() }, 2000)
     }
     socket.onmessage = (e) => {
       try {
@@ -70,6 +78,18 @@ export const useRoomStore = defineStore('room', () => {
       } catch {}
     }
     ws.value = socket
+  }
+
+  function pause() {
+    clearTimeout(retryTimer)
+    retryTimer = null
+    retryCount = 0
+    if (ws.value) {
+      ws.value.onclose = null
+      ws.value.close()
+      ws.value = null
+    }
+    connected.value = false
   }
 
   function handleMessage(msg) {
@@ -133,6 +153,26 @@ export const useRoomStore = defineStore('room', () => {
   function sendPlaybackSync(isPlaying, position) { send('playback_sync', { isPlaying, position }) }
   function sendNextSong() { send('next_song', {}) }
 
+  async function checkActiveRoom() {
+    const storedRoomId = localStorage.getItem('bfm_roomId')
+    const storedMemberId = localStorage.getItem('bfm_memberId')
+    if (!storedRoomId || !storedMemberId) return null
+    try {
+      const { data } = await axios.get(`${API}/room/${storedRoomId}`)
+      const member = data.members?.find(m => m.id === storedMemberId)
+      if (!member) {
+        localStorage.removeItem('bfm_roomId')
+        localStorage.removeItem('bfm_memberId')
+        return null
+      }
+      return { room: data, memberId: storedMemberId }
+    } catch {
+      localStorage.removeItem('bfm_roomId')
+      localStorage.removeItem('bfm_memberId')
+      return null
+    }
+  }
+
   async function searchMusic(q) {
     const { data } = await axios.get(`${API}/music/search`, { params: { q } })
     return data
@@ -173,7 +213,7 @@ export const useRoomStore = defineStore('room', () => {
   return {
     roomId, memberId, room, ws, connected, reactions,
     me, isHost, currentSong,
-    createRoom, joinRoom, connect, disconnect,
+    createRoom, joinRoom, connect, pause, disconnect, checkActiveRoom,
     sendChat, sendReaction, sendQueueAdd, sendQueueRemove,
     sendVoteUp, sendVoteSkip, sendPlaybackSync, sendNextSong,
     searchMusic, getMusicURL, getLyric,

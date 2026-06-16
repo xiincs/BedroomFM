@@ -881,6 +881,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   clearInterval(positionTimer.value)
+  store.pause()
 })
 </script>
 

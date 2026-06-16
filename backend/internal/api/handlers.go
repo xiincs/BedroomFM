@@ -445,6 +445,12 @@ func handleWSMessage(c *hub.Client, msg hub.WSMessage) {
 		startNext(room)
 		room.Mu.Unlock()
 		broadcastRoomState(c.RoomID, room)
+
+	case "leave":
+		room.Mu.Lock()
+		delete(room.Members, c.MemberID)
+		room.Mu.Unlock()
+		broadcastRoomState(c.RoomID, room)
 	}
 }
 
